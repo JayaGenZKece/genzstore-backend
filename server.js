@@ -364,15 +364,4 @@ app.get("/api/cek-trx/:orderId", async (req, res) => {
 // ==========================================
 // NYALAIN SERVER
 // ==========================================
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`\n🔥 Server GenZstore nyala di http://localhost:${PORT}`);
-  console.log("📋 Routes tersedia:");
-  console.log("   POST /api/cek-nickname       → Cek nama akun game");
-  console.log("   POST /api/create-transaction → Simpan pesanan baru");
-  console.log("   POST /api/get-qris           → Buat link QRIS Pakasir");
-  console.log("   POST /api/webhook-pakasir    → Notif pembayaran lunas");
-  console.log("   GET  /api/cek-saldo          → Cek saldo Tokovoucher");
-  console.log("   GET  /api/cek-status/:id     → Cek status pesanan");
-  console.log("   GET  /api/cek-trx/:id        → Cek TRX di Tokovoucher\n");
-});
+module.exports = app;
