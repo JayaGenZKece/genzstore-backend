@@ -245,10 +245,8 @@ app.post("/api/get-qris", async (req, res) => {
   const { orderId, harga } = req.body;
 
   try {
-    const linkKembali =
-      "https://genzstore-web.vercel.app/topup/invoice_akhir.html?order_id=${orderId}";
-    const checkoutUrl =
-      "https://app.pakasir.com/pay/genzstore/${harga}?order_id=${orderId}&qris_only=1&redirect=${encodeURIComponent(linkKembali)}";
+    const linkKembali = `https://genzstore-web.vercel.app/topup/invoice_akhir.html?order_id=${orderId}`;
+    const checkoutUrl = `https://app.pakasir.com/pay/genzstore/${harga}?order_id=${orderId}&qris_only=1&redirect=${encodeURIComponent(linkKembali)}`;
 
     res.json({ status: "sukses", checkout_url: checkoutUrl });
   } catch (error) {
