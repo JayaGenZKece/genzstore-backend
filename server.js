@@ -67,12 +67,9 @@ function buatSignatureTV(refId) {
 // Format: md5(MEMBER_CODE + SECRET) — tanpa ref_id
 // Dipakai untuk: list produk, cek saldo, dll
 // ==========================================
-function buatSignatureDefault() {
-  return crypto
-    .createHash("md5")
-    .update(`${TV_MEMBER_CODE}${TV_SECRET}`)
-    .digest("hex");
-}
+// Signature default statis dari dashboard TokoVoucher
+// (Pengaturan > Secret Key > Signature)
+const TV_SIGNATURE_DEFAULT = "a522624414eff2782c8d33c1575cec65";
 
 // ==========================================
 // HELPER: KONVERSI KREDIT KE RUPIAH + MARGIN
@@ -399,7 +396,7 @@ app.get("/api/cek-trx/:orderId", async (req, res) => {
 app.get("/api/produk-ml", async (req, res) => {
   try {
     // Produk list pakai signature DEFAULT: md5(MEMBER_CODE + SECRET)
-    const signature = buatSignatureDefault();
+    const signature = TV_SIGNATURE_DEFAULT;
 
     console.log("📦 Mengambil daftar produk ML dari TokoVoucher...");
 
