@@ -28,6 +28,12 @@ const TV_BASE_URL = "https://api.tokovoucher.net/v1";
 const PAKASIR_SLUG = "genzstore";
 
 // ==========================================
+// KONFIGURASI MARGIN HARGA JUAL
+// 15% di atas harga modal GOLD TokoVoucher
+// ==========================================
+const MARGIN_PERSEN = 15;
+
+// ==========================================
 // KONFIGURASI SUPABASE
 // ==========================================
 const supabaseUrl = "https://hbbbuskvtqoetlfmiiyb.supabase.co";
@@ -54,6 +60,20 @@ function buatSignatureTV(refId) {
     .createHash("md5")
     .update(`${TV_MEMBER_CODE}:${TV_SECRET}:${refId}`)
     .digest("hex");
+}
+
+// ==========================================
+// HELPER: KONVERSI KREDIT KE RUPIAH + MARGIN
+// Kredit TokoVoucher = Rupiah (1 kredit = Rp 1)
+// ==========================================
+function hitungHargaJual(hargaModal) {
+  const hargaJual = Math.ceil(hargaModal * (1 + MARGIN_PERSEN / 100));
+  // Bulatkan ke ratusan terdekat biar rapi
+  return Math.ceil(hargaJual / 100) * 100;
+}
+
+function formatRupiah(angka) {
+  return "Rp " + angka.toLocaleString("id-ID");
 }
 
 // ==========================================
@@ -358,6 +378,84 @@ app.get("/api/cek-trx/:orderId", async (req, res) => {
     res.json({ status: "sukses", data: response.data });
   } catch (error) {
     res.status(500).json({ status: "error", pesan: error.message });
+  }
+});
+
+// ==========================================
+// ROUTE 8: AMBIL PRODUK ML DARI TOKOVOUCHER
+// + Hitung harga jual otomatis (modal GOLD + 15%)
+// Endpoint: GET /api/produk-ml
+// ==========================================
+app.get("/api/produk-ml", async (req, res) => {
+  try {
+    const refId = "PRODUK-" + Date.now();
+    const signature = buatSignatureTV(refId);
+
+    console.log("📦 Mengambil daftar produk ML dari TokoVoucher...");
+
+    // Ambil daftar produk dari TokoVoucher
+    // Kategori: game_voucher, operator: mlbb (Mobile Legends New ID)
+    const response = await axios.get(`${TV_BASE_URL}/produk/list`, {
+      params: {
+        member_code: TV_MEMBER_CODE,
+        signature: signature,
+        kategori: "game_voucher",
+        operator: "mlbb",
+      },
+    });
+
+    const hasil = response.data;
+    console.log(
+      "📥 Response TokoVoucher produk:",
+      JSON.stringify(hasil).substring(0, 200),
+    );
+
+    if (!hasil || hasil.status !== 1) {
+      return res.status(500).json({
+        status: "error",
+        pesan: "Gagal ambil produk dari TokoVoucher",
+        detail: hasil,
+      });
+    }
+
+    // Filter hanya yang AKTIF dan bukan GANGGUAN
+    const produkAktif = hasil.data.filter(
+      (p) =>
+        p.status === "aktif" || p.status === "1" || p.keterangan === "AKTIF",
+    );
+
+    // Map dan hitung harga jual
+    const produkFormatted = produkAktif.map((p) => {
+      // Harga modal dari level GOLD
+      const hargaModal = parseInt(p.harga_gold || p.harga || 0);
+      const hargaJual = hitungHargaJual(hargaModal);
+
+      return {
+        kode: p.kode_produk || p.kode,
+        nama: p.nama_produk || p.nama,
+        hargaModal: hargaModal,
+        hargaJual: hargaJual,
+        hargaJualFormat: formatRupiah(hargaJual),
+        status: p.keterangan || p.status,
+      };
+    });
+
+    // Urutkan dari harga terendah
+    produkFormatted.sort((a, b) => a.hargaJual - b.hargaJual);
+
+    console.log(`✅ Berhasil ambil ${produkFormatted.length} produk ML aktif`);
+    res.json({
+      status: "sukses",
+      total: produkFormatted.length,
+      margin: `${MARGIN_PERSEN}%`,
+      data: produkFormatted,
+    });
+  } catch (error) {
+    console.error("❌ Error ambil produk ML:", error.message);
+    res.status(500).json({
+      status: "error",
+      pesan: "Gagal menghubungi TokoVoucher: " + error.message,
+    });
   }
 });
 
