@@ -383,8 +383,6 @@ app.get("/api/cek-trx/:orderId", async (req, res) => {
 
 // ==========================================
 // ROUTE 8: AMBIL PRODUK ML DARI TOKOVOUCHER
-// + Hitung harga jual otomatis (modal GOLD + 15%)
-// Endpoint: GET /api/produk-ml
 // ==========================================
 app.get("/api/produk-ml", async (req, res) => {
   try {
@@ -393,8 +391,6 @@ app.get("/api/produk-ml", async (req, res) => {
 
     console.log("📦 Mengambil daftar produk ML dari TokoVoucher...");
 
-    // Ambil daftar produk dari TokoVoucher
-    // Endpoint resmi: /produk/code?kode=MLBB (prefix Mobile Legends)
     const response = await axios.get(
       `https://api.tokovoucher.net/produk/code`,
       {
@@ -407,12 +403,19 @@ app.get("/api/produk-ml", async (req, res) => {
     );
 
     const hasil = response.data;
-    console.log(
-      "📥 Response TokoVoucher produk:",
-      JSON.stringify(hasil).substring(0, 300),
-    );
 
-    if (!hasil || hasil.status !== 1) {
+    // --- TAMBAHKAN KODE DEBUG DI SINI ---
+    console.log("Full Respon API:", hasil);
+
+    if (hasil.status === 0 || hasil.status === "0") {
+      console.error(
+        "Pesan Error Tokovoucher:",
+        hasil.error_msg || hasil.message,
+      );
+    }
+    // ------------------------------------
+
+    if (!hasil || (hasil.status !== 1 && hasil.status !== "1")) {
       return res.status(500).json({
         status: "error",
         pesan: "Gagal ambil produk dari TokoVoucher",
@@ -420,7 +423,7 @@ app.get("/api/produk-ml", async (req, res) => {
       });
     }
 
-    // Filter hanya yang status aktif (status: 1)
+    // Filter hanya yang status aktif
     const produkAktif = hasil.data.filter(
       (p) => p.status === 1 || p.status === "1",
     );
