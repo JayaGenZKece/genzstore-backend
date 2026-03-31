@@ -63,6 +63,18 @@ function buatSignatureTV(refId) {
 }
 
 // ==========================================
+// HELPER: BUAT SIGNATURE DEFAULT TOKOVOUCHER
+// Format: md5(MEMBER_CODE + SECRET) — tanpa ref_id
+// Dipakai untuk: list produk, cek saldo, dll
+// ==========================================
+function buatSignatureDefault() {
+  return crypto
+    .createHash("md5")
+    .update(`${TV_MEMBER_CODE}${TV_SECRET}`)
+    .digest("hex");
+}
+
+// ==========================================
 // HELPER: KONVERSI KREDIT KE RUPIAH + MARGIN
 // Kredit TokoVoucher = Rupiah (1 kredit = Rp 1)
 // ==========================================
@@ -386,8 +398,8 @@ app.get("/api/cek-trx/:orderId", async (req, res) => {
 // ==========================================
 app.get("/api/produk-ml", async (req, res) => {
   try {
-    const refId = "PRODUK-" + Date.now();
-    const signature = buatSignatureTV(refId);
+    // Produk list pakai signature DEFAULT: md5(MEMBER_CODE + SECRET)
+    const signature = buatSignatureDefault();
 
     console.log("📦 Mengambil daftar produk ML dari TokoVoucher...");
 
@@ -403,17 +415,7 @@ app.get("/api/produk-ml", async (req, res) => {
     );
 
     const hasil = response.data;
-
-    // --- TAMBAHKAN KODE DEBUG DI SINI ---
-    console.log("Full Respon API:", hasil);
-
-    if (hasil.status === 0 || hasil.status === "0") {
-      console.error(
-        "Pesan Error Tokovoucher:",
-        hasil.error_msg || hasil.message,
-      );
-    }
-    // ------------------------------------
+    console.log("📥 Response:", JSON.stringify(hasil).substring(0, 200));
 
     if (!hasil || (hasil.status !== 1 && hasil.status !== "1")) {
       return res.status(500).json({
