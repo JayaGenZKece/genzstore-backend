@@ -394,20 +394,22 @@ app.get("/api/produk-ml", async (req, res) => {
     console.log("📦 Mengambil daftar produk ML dari TokoVoucher...");
 
     // Ambil daftar produk dari TokoVoucher
-    // Kategori: game_voucher, operator: mlbb (Mobile Legends New ID)
-    const response = await axios.get(`${TV_BASE_URL}/produk/list`, {
-      params: {
-        member_code: TV_MEMBER_CODE,
-        signature: signature,
-        kategori: "game_voucher",
-        operator: "mlbb",
+    // Endpoint resmi: /produk/code?kode=MLBB (prefix Mobile Legends)
+    const response = await axios.get(
+      `https://api.tokovoucher.net/produk/code`,
+      {
+        params: {
+          member_code: TV_MEMBER_CODE,
+          signature: signature,
+          kode: "MLBB",
+        },
       },
-    });
+    );
 
     const hasil = response.data;
     console.log(
       "📥 Response TokoVoucher produk:",
-      JSON.stringify(hasil).substring(0, 200),
+      JSON.stringify(hasil).substring(0, 300),
     );
 
     if (!hasil || hasil.status !== 1) {
@@ -418,25 +420,23 @@ app.get("/api/produk-ml", async (req, res) => {
       });
     }
 
-    // Filter hanya yang AKTIF dan bukan GANGGUAN
+    // Filter hanya yang status aktif (status: 1)
     const produkAktif = hasil.data.filter(
-      (p) =>
-        p.status === "aktif" || p.status === "1" || p.keterangan === "AKTIF",
+      (p) => p.status === 1 || p.status === "1",
     );
 
     // Map dan hitung harga jual
     const produkFormatted = produkAktif.map((p) => {
-      // Harga modal dari level GOLD
-      const hargaModal = parseInt(p.harga_gold || p.harga || 0);
+      const hargaModal = parseInt(p.price || 0);
       const hargaJual = hitungHargaJual(hargaModal);
 
       return {
-        kode: p.kode_produk || p.kode,
-        nama: p.nama_produk || p.nama,
+        kode: p.code,
+        nama: p.nama_produk,
         hargaModal: hargaModal,
         hargaJual: hargaJual,
         hargaJualFormat: formatRupiah(hargaJual),
-        status: p.keterangan || p.status,
+        status: p.status,
       };
     });
 
