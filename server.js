@@ -392,65 +392,168 @@ app.get("/api/cek-trx/:orderId", async (req, res) => {
 
 // ==========================================
 // ROUTE 8: AMBIL PRODUK ML DARI TOKOVOUCHER
+// Tampilkan: Weekly Pass (MLAWP1-5) + Diamond 5-350 DM
 // ==========================================
+
+// Kode diamond yang diizinkan (5 DM s/d ~350 DM)
+const DIAMOND_WHITELIST = [
+  "MLBB3",
+  "MLBB5",
+  "MLBB10",
+  "MLBB12",
+  "MLBB14",
+  "MLBB15",
+  "MLBB17",
+  "MLBB18",
+  "MLBB19",
+  "MLBB20",
+  "MLBB23",
+  "MLBB28",
+  "MLBB30",
+  "MLBB33",
+  "MLBB36",
+  "MLBB40",
+  "MLBB42",
+  "MLBB44",
+  "MLBB45",
+  "MLBB46",
+  "MLBB50",
+  "MLBB54",
+  "MLBB56",
+  "MLBB59",
+  "MLBB60",
+  "MLBB64",
+  "MLBB65",
+  "MLBB66",
+  "MLBB68",
+  "MLBB70",
+  "MLBB71",
+  "MLBB74",
+  "MLBB75",
+  "MLBB78",
+  "MLBB81",
+  "MLBB84",
+  "MLBB85",
+  "MLBB88",
+  "MLBB92",
+  "MLBB100",
+  "MLBB102",
+  "MLBB110",
+  "MLBB112",
+  "MLBB113",
+  "MLBB114",
+  "MLBB128",
+  "MLBB140",
+  "MLBB141",
+  "MLBB148",
+  "MLBB150",
+  "MLBB153",
+  "MLBB154",
+  "MLBB164",
+  "MLBB168",
+  "MLBB170",
+  "MLBB183",
+  "MLBB184",
+  "MLBB185",
+  "MLBB210",
+  "MLBB222",
+  "MLBB240",
+  "MLBB241",
+  "MLBB257",
+  "MLBB258",
+  "MLBB277",
+  "MLBB282",
+  "MLBB284",
+  "MLBB285",
+  "MLBB288",
+  "MLBB296",
+  "MLBB300",
+  "MLBB301",
+  "MLBB333",
+  "MLBB336",
+  "MLBB346",
+];
+
+// Kode Weekly Diamond Pass
+const WEEKLY_PASS_CODES = ["MLAWP1", "MLAWP2", "MLAWP3", "MLAWP4", "MLAWP5"];
+
 app.get("/api/produk-ml", async (req, res) => {
   try {
-    // Produk list pakai signature DEFAULT: md5(MEMBER_CODE + SECRET)
     const signature = TV_SIGNATURE_DEFAULT;
+    console.log("📦 Mengambil produk ML dari TokoVoucher...");
 
-    console.log("📦 Mengambil daftar produk ML dari TokoVoucher...");
+    // Ambil diamond (MLBB) dan weekly pass (MLAW) secara paralel
+    const [resDiamond, resWeekly] = await Promise.all([
+      axios.get("https://api.tokovoucher.net/produk/code", {
+        params: { member_code: TV_MEMBER_CODE, signature, kode: "MLBB" },
+      }),
+      axios.get("https://api.tokovoucher.net/produk/code", {
+        params: { member_code: TV_MEMBER_CODE, signature, kode: "MLAW" },
+      }),
+    ]);
 
-    const response = await axios.get(
-      `https://api.tokovoucher.net/produk/code`,
-      {
-        params: {
-          member_code: TV_MEMBER_CODE,
-          signature: signature,
-          kode: "MLBB",
-        },
-      },
-    );
+    const dataDiamond = resDiamond.data;
+    const dataWeekly = resWeekly.data;
 
-    const hasil = response.data;
-    console.log("📥 Response:", JSON.stringify(hasil).substring(0, 200));
-
-    if (!hasil || (hasil.status !== 1 && hasil.status !== "1")) {
+    if (
+      !dataDiamond ||
+      (dataDiamond.status !== 1 && dataDiamond.status !== "1")
+    ) {
       return res.status(500).json({
         status: "error",
-        pesan: "Gagal ambil produk dari TokoVoucher",
-        detail: hasil,
+        pesan: "Gagal ambil produk diamond dari TokoVoucher",
+        detail: dataDiamond,
       });
     }
 
-    // Filter hanya yang status aktif
-    const produkAktif = hasil.data.filter(
-      (p) => p.status === 1 || p.status === "1",
-    );
-
-    // Map dan hitung harga jual
-    const produkFormatted = produkAktif.map((p) => {
+    // Helper format
+    const formatProduk = (p) => {
       const hargaModal = parseInt(p.price || 0);
       const hargaJual = hitungHargaJual(hargaModal);
-
       return {
         kode: p.code,
         nama: p.nama_produk,
-        hargaModal: hargaModal,
-        hargaJual: hargaJual,
+        hargaModal,
+        hargaJual,
         hargaJualFormat: formatRupiah(hargaJual),
-        status: p.status,
+        tipe: "diamond",
       };
-    });
+    };
 
-    // Urutkan dari harga terendah
-    produkFormatted.sort((a, b) => a.hargaJual - b.hargaJual);
+    // 1. Weekly Pass: filter MLAWP1-5 yang aktif, urutkan
+    let produkWeekly = [];
+    if (dataWeekly && (dataWeekly.status === 1 || dataWeekly.status === "1")) {
+      produkWeekly = dataWeekly.data
+        .filter(
+          (p) =>
+            WEEKLY_PASS_CODES.includes(p.code) &&
+            (p.status === 1 || p.status === "1"),
+        )
+        .map((p) => ({ ...formatProduk(p), tipe: "weekly" }))
+        .sort((a, b) => a.hargaJual - b.hargaJual);
+    }
 
-    console.log(`✅ Berhasil ambil ${produkFormatted.length} produk ML aktif`);
+    // 2. Diamond: filter whitelist 5-350 DM yang aktif, urutkan
+    const produkDiamond = dataDiamond.data
+      .filter(
+        (p) =>
+          DIAMOND_WHITELIST.includes(p.code) &&
+          (p.status === 1 || p.status === "1"),
+      )
+      .map(formatProduk)
+      .sort((a, b) => a.hargaJual - b.hargaJual);
+
+    // Gabung: Weekly Pass dulu, baru Diamond
+    const semuaProduk = [...produkWeekly, ...produkDiamond];
+
+    console.log(
+      `✅ Weekly: ${produkWeekly.length} | Diamond: ${produkDiamond.length}`,
+    );
     res.json({
       status: "sukses",
-      total: produkFormatted.length,
+      total: semuaProduk.length,
       margin: `${MARGIN_PERSEN}%`,
-      data: produkFormatted,
+      data: semuaProduk,
     });
   } catch (error) {
     console.error("❌ Error ambil produk ML:", error.message);
