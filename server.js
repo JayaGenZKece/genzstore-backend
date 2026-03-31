@@ -565,6 +565,79 @@ app.get("/api/produk-ml", async (req, res) => {
 });
 
 // ==========================================
+// ROUTE 9: AMBIL PRODUK ML GLOBAL DARI TOKOVOUCHER
+// Kode prefix: MLBBGLO (Mobile Legends Global)
+// Endpoint: GET /api/produk-mlglobal
+// ==========================================
+app.get("/api/produk-mlglobal", async (req, res) => {
+  try {
+    const signature = TV_SIGNATURE_DEFAULT;
+    console.log("📦 Mengambil produk ML Global dari TokoVoucher...");
+
+    const response = await axios.get(
+      "https://api.tokovoucher.net/produk/code",
+      {
+        params: {
+          member_code: TV_MEMBER_CODE,
+          signature: signature,
+          kode: "MLBBGLO",
+        },
+      },
+    );
+
+    const hasil = response.data;
+    console.log(
+      "📥 Response ML Global:",
+      JSON.stringify(hasil).substring(0, 200),
+    );
+
+    if (!hasil || (hasil.status !== 1 && hasil.status !== "1")) {
+      return res.status(500).json({
+        status: "error",
+        pesan: "Gagal ambil produk ML Global dari TokoVoucher",
+        detail: hasil,
+      });
+    }
+
+    // Filter hanya yang aktif
+    const produkAktif = hasil.data.filter(
+      (p) => p.status === 1 || p.status === "1",
+    );
+
+    // Map dan hitung harga jual + margin 15%
+    const produkFormatted = produkAktif
+      .map((p) => {
+        const hargaModal = parseInt(p.price || 0);
+        const hargaJual = hitungHargaJual(hargaModal);
+        return {
+          kode: p.code,
+          nama: p.nama_produk,
+          hargaModal,
+          hargaJual,
+          hargaJualFormat: formatRupiah(hargaJual),
+        };
+      })
+      .sort((a, b) => a.hargaJual - b.hargaJual);
+
+    console.log(
+      `✅ Berhasil ambil ${produkFormatted.length} produk ML Global aktif`,
+    );
+    res.json({
+      status: "sukses",
+      total: produkFormatted.length,
+      margin: `${MARGIN_PERSEN}%`,
+      data: produkFormatted,
+    });
+  } catch (error) {
+    console.error("❌ Error ambil produk ML Global:", error.message);
+    res.status(500).json({
+      status: "error",
+      pesan: "Gagal menghubungi TokoVoucher: " + error.message,
+    });
+  }
+});
+
+// ==========================================
 // NYALAIN SERVER
 // ==========================================
 module.exports = app;
