@@ -31,7 +31,7 @@ const PAKASIR_SLUG = "genzstore";
 // KONFIGURASI MARGIN HARGA JUAL
 // 15% di atas harga modal GOLD TokoVoucher
 // ==========================================
-const MARGIN_PERSEN = 15;
+const MARGIN_PERSEN = 10;
 
 // ==========================================
 // KONFIGURASI SUPABASE
