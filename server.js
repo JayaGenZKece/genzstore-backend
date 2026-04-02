@@ -648,20 +648,18 @@ app.get("/api/produk-mlglobal", async (req, res) => {
 // ==========================================
 
 const FF_DIAMOND_WHITELIST = [
-  "FFID5",
-  "FFID12",
-  "FFID25",
-  "FFID50",
-  "FFID70",
-  "FFID100",
-  "FFID140",
-  "FFID210",
-  "FFID355",
-  "FFID520",
-  "FFID720",
-  "FFID1080",
-  "FFID2180",
-  "FFID5600",
+  "FF5",
+  "FF12",
+  "FF25",
+  "FF50",
+  "FF70",
+  "FF100",
+  "FF140",
+  "FF210",
+  "FF355",
+  "FF520",
+  "FF720",
+  "FF1080",
 ];
 
 app.get("/api/produk-ff", async (req, res) => {
@@ -675,7 +673,7 @@ app.get("/api/produk-ff", async (req, res) => {
         params: {
           member_code: TV_MEMBER_CODE,
           signature: signature,
-          kode: "FFID",
+          kode: "FF",
         },
       },
     );
