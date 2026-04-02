@@ -653,7 +653,6 @@ app.get("/api/produk-mlglobal", async (req, res) => {
 // ==========================================
 
 const FF_DIAMOND_WHITELIST = [
-  "FF5",
   "FF10",
   "FF12",
   "FF15",
