@@ -35,7 +35,7 @@ const PAKASIR_SLUG = "genzstore";
 const MARGIN = {
   ml: 8, // Mobile Legends Server ID  → 8%
   mlglobal: 8, // Mobile Legends Global     → 8%
-  ff: 12, // Free Fire                 → 12%
+  ff: 10, // Free Fire                 → 10%
 };
 
 // ==========================================
