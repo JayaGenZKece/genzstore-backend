@@ -31,7 +31,12 @@ const PAKASIR_SLUG = "genzstore";
 // KONFIGURASI MARGIN HARGA JUAL
 // 15% di atas harga modal GOLD TokoVoucher
 // ==========================================
-const MARGIN_PERSEN = 8;
+// Margin per game — tinggal ganti angkanya sesuai kebutuhan
+const MARGIN = {
+  ml: 8, // Mobile Legends Server ID  → 8%
+  mlglobal: 8, // Mobile Legends Global     → 8%
+  ff: 10, // Free Fire                 → 10%
+};
 
 // ==========================================
 // KONFIGURASI SUPABASE
@@ -75,8 +80,8 @@ const TV_SIGNATURE_DEFAULT = "a522624414eff2782c8d33c1575cec65";
 // HELPER: KONVERSI KREDIT KE RUPIAH + MARGIN
 // Kredit TokoVoucher = Rupiah (1 kredit = Rp 1)
 // ==========================================
-function hitungHargaJual(hargaModal) {
-  const hargaJual = Math.ceil(hargaModal * (1 + MARGIN_PERSEN / 100));
+function hitungHargaJual(hargaModal, marginPersen) {
+  const hargaJual = Math.ceil(hargaModal * (1 + marginPersen / 100));
   // Bulatkan ke ratusan terdekat biar rapi
   return Math.ceil(hargaJual / 100) * 100;
 }
@@ -509,7 +514,7 @@ app.get("/api/produk-ml", async (req, res) => {
     // Helper format
     const formatProduk = (p) => {
       const hargaModal = parseInt(p.price || 0);
-      const hargaJual = hitungHargaJual(hargaModal);
+      const hargaJual = hitungHargaJual(hargaModal, MARGIN.ml);
       return {
         kode: p.code,
         nama: p.nama_produk,
@@ -552,7 +557,7 @@ app.get("/api/produk-ml", async (req, res) => {
     res.json({
       status: "sukses",
       total: semuaProduk.length,
-      margin: `${MARGIN_PERSEN}%`,
+      margin: `${MARGIN.ml}%`,
       data: semuaProduk,
     });
   } catch (error) {
@@ -604,11 +609,11 @@ app.get("/api/produk-mlglobal", async (req, res) => {
       (p) => p.status === 1 || p.status === "1",
     );
 
-    // Map dan hitung harga jual + margin 15%
+    // Map dan hitung harga jual + margin ML Global
     const produkFormatted = produkAktif
       .map((p) => {
         const hargaModal = parseInt(p.price || 0);
-        const hargaJual = hitungHargaJual(hargaModal);
+        const hargaJual = hitungHargaJual(hargaModal, MARGIN.mlglobal);
         return {
           kode: p.code,
           nama: p.nama_produk,
@@ -625,7 +630,7 @@ app.get("/api/produk-mlglobal", async (req, res) => {
     res.json({
       status: "sukses",
       total: produkFormatted.length,
-      margin: `${MARGIN_PERSEN}%`,
+      margin: `${MARGIN.mlglobal}%`,
       data: produkFormatted,
     });
   } catch (error) {
@@ -649,17 +654,24 @@ app.get("/api/produk-mlglobal", async (req, res) => {
 
 const FF_DIAMOND_WHITELIST = [
   "FF5",
+  "FF10",
   "FF12",
+  "FF15",
+  "FF20",
   "FF25",
+  "FF30",
+  "FF40",
   "FF50",
+  "FF60",
   "FF70",
+  "FF80",
   "FF100",
+  "FF120",
   "FF140",
   "FF210",
   "FF355",
   "FF520",
   "FF720",
-  "FF1080",
 ];
 
 app.get("/api/produk-ff", async (req, res) => {
@@ -696,11 +708,11 @@ app.get("/api/produk-ff", async (req, res) => {
         (p.status === 1 || p.status === "1"),
     );
 
-    // Map dan hitung harga jual + margin
+    // Map dan hitung harga jual + margin FF
     const produkFormatted = produkAktif
       .map((p) => {
         const hargaModal = parseInt(p.price || 0);
-        const hargaJual = hitungHargaJual(hargaModal);
+        const hargaJual = hitungHargaJual(hargaModal, MARGIN.ff);
         return {
           kode: p.code,
           nama: p.nama_produk,
@@ -719,7 +731,7 @@ app.get("/api/produk-ff", async (req, res) => {
     res.json({
       status: "sukses",
       total: produkFormatted.length,
-      margin: `${MARGIN_PERSEN}%`,
+      margin: `${MARGIN.ff}%`,
       data: produkFormatted,
     });
   } catch (error) {
