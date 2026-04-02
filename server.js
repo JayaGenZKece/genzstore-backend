@@ -36,15 +36,6 @@ const MARGIN = {
   ml: 8, // Mobile Legends Server ID  → 8%
   mlglobal: 8, // Mobile Legends Global     → 8%
   ff: 10, // Free Fire                 → 10%
-  pubg: 10, // PUBG Mobile               → 10%
-  valorant: 10, // Valorant                  → 10%
-  cod: 10, // Call of Duty Mobile       → 10%
-  genshin: 10, // Genshin Impact            → 10%
-  pb: 10, // Point Blank               → 10%
-  aov: 10, // Arena of Valor            → 10%
-  coc: 10, // Clash of Clans            → 10%
-  hok: 10, // Honor of Kings            → 10%
-  roblox: 10, // Roblox                    → 10%
 };
 
 // ==========================================
@@ -662,20 +653,24 @@ app.get("/api/produk-mlglobal", async (req, res) => {
 // ==========================================
 
 const FF_DIAMOND_WHITELIST = [
-  "FFID5",
-  "FFID12",
-  "FFID25",
-  "FFID50",
-  "FFID70",
-  "FFID100",
-  "FFID140",
-  "FFID210",
-  "FFID355",
-  "FFID520",
-  "FFID720",
-  "FFID1080",
-  "FFID2180",
-  "FFID5600",
+  "FF10",
+  "FF12",
+  "FF15",
+  "FF20",
+  "FF25",
+  "FF30",
+  "FF40",
+  "FF50",
+  "FF60",
+  "FF70",
+  "FF80",
+  "FF100",
+  "FF120",
+  "FF140",
+  "FF210",
+  "FF355",
+  "FF520",
+  "FF720",
 ];
 
 app.get("/api/produk-ff", async (req, res) => {
@@ -689,7 +684,7 @@ app.get("/api/produk-ff", async (req, res) => {
         params: {
           member_code: TV_MEMBER_CODE,
           signature: signature,
-          kode: "FFID",
+          kode: "FF",
         },
       },
     );
@@ -746,144 +741,6 @@ app.get("/api/produk-ff", async (req, res) => {
     });
   }
 });
-
-// ==========================================
-// HELPER: BUILDER ROUTE PRODUK GENERIK
-// Dipakai oleh semua game selain ML (yang punya Weekly Pass)
-// ==========================================
-function buatRouteProduk(kodePrefixTV, gameKey, labelLog) {
-  return async (req, res) => {
-    try {
-      console.log(`📦 Mengambil produk ${labelLog} dari TokoVoucher...`);
-      const response = await axios.get(
-        "https://api.tokovoucher.net/produk/code",
-        {
-          params: {
-            member_code: TV_MEMBER_CODE,
-            signature: TV_SIGNATURE_DEFAULT,
-            kode: kodePrefixTV,
-          },
-        },
-      );
-      const hasil = response.data;
-      console.log(
-        `📥 Response ${labelLog}:`,
-        JSON.stringify(hasil).substring(0, 200),
-      );
-
-      if (!hasil || (hasil.status !== 1 && hasil.status !== "1")) {
-        return res.status(500).json({
-          status: "error",
-          pesan: `Gagal ambil produk ${labelLog} dari TokoVoucher`,
-          detail: hasil,
-        });
-      }
-
-      const marginGame = MARGIN[gameKey] || 10;
-      const produkFormatted = hasil.data
-        .filter((p) => p.status === 1 || p.status === "1")
-        .map((p) => {
-          const hargaModal = parseInt(p.price || 0);
-          const hargaJual = hitungHargaJual(hargaModal, marginGame);
-          return {
-            kode: p.code,
-            nama: p.nama_produk,
-            hargaModal,
-            hargaJual,
-            hargaJualFormat: formatRupiah(hargaJual),
-            tipe: "diamond",
-          };
-        })
-        .sort((a, b) => a.hargaJual - b.hargaJual);
-
-      console.log(
-        `✅ Berhasil ambil ${produkFormatted.length} produk ${labelLog} aktif`,
-      );
-      res.json({
-        status: "sukses",
-        total: produkFormatted.length,
-        margin: `${marginGame}%`,
-        data: produkFormatted,
-      });
-    } catch (error) {
-      console.error(`❌ Error ambil produk ${labelLog}:`, error.message);
-      res.status(500).json({
-        status: "error",
-        pesan: `Gagal menghubungi TokoVoucher: ${error.message}`,
-      });
-    }
-  };
-}
-
-// ==========================================
-// ROUTE 11: PUBG MOBILE
-// Prefix: "PMI" = PUBG Mobile ID (Region Indonesia)
-// ==========================================
-app.get("/api/produk-pubg", buatRouteProduk("PMI", "pubg", "PUBG Mobile"));
-
-// ==========================================
-// ROUTE 12: VALORANT
-// Prefix: "VALO" = Valorant ID (Region Indonesia)
-// Contoh kode: VALO475, VALO950, VALO1000, VALO1475, VALO2000
-// ==========================================
-app.get(
-  "/api/produk-valorant",
-  buatRouteProduk("VALO", "valorant", "Valorant"),
-);
-
-// ==========================================
-// ROUTE 13: CALL OF DUTY MOBILE
-// ⚠️ Cek prefix aktif: kode "CODM" di TokoVoucher
-// ==========================================
-app.get(
-  "/api/produk-cod",
-  buatRouteProduk("CODM", "cod", "Call of Duty Mobile"),
-);
-
-// ==========================================
-// ROUTE 14: GENSHIN IMPACT
-// Prefix: "GIR" = Genshin Impact (Genesis Crystals)
-// Contoh kode: GIR60, GIR120, GIR180, GIR240, GIR330
-// ==========================================
-app.get(
-  "/api/produk-genshin",
-  buatRouteProduk("GIR", "genshin", "Genshin Impact"),
-);
-
-// ==========================================
-// ROUTE 15: POINT BLANK
-// Prefix: "PBC" = Point Blank Cash
-// Contoh kode: PBC10, PBC20, PBC50, PBC100, PBC200, PBC500
-// ==========================================
-app.get("/api/produk-pb", buatRouteProduk("PBC", "pb", "Point Blank"));
-
-// ==========================================
-// ROUTE 16: ARENA OF VALOR
-// ⚠️ Cek prefix aktif: kode "AOV" di TokoVoucher
-// ==========================================
-app.get("/api/produk-aov", buatRouteProduk("AOV", "aov", "Arena of Valor"));
-
-// ==========================================
-// ROUTE 17: CLASH OF CLANS
-// Prefix: "COCVGP" = COC via Google Play Voucher (Region Indonesia)
-// Contoh kode: COCVGP5000, COCVGP10000, COCVGP16000, COCVGP20000
-// Input transaksi: Nomor HP (bukan Player Tag)
-// ==========================================
-app.get("/api/produk-coc", buatRouteProduk("COCVGP", "coc", "Clash of Clans"));
-
-// ==========================================
-// ROUTE 18: HONOR OF KINGS
-// Prefix: "HOK" = Honor of Kings (Region Indonesia)
-// Contoh kode: HOK16S17A, HOK80S17A, HOK240S17A, HOK400S17A
-// ==========================================
-app.get("/api/produk-hok", buatRouteProduk("HOK", "hok", "Honor of Kings"));
-
-// ==========================================
-// ROUTE 19: ROBLOX VOUCHER
-// Prefix: "ROB" = Roblox Global Voucher
-// Contoh kode: ROB800, ROB2000, ROB4500, ROB10000
-// ==========================================
-app.get("/api/produk-roblox", buatRouteProduk("ROB", "roblox", "Roblox"));
 
 // ==========================================
 // NYALAIN SERVER
