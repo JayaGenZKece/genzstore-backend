@@ -648,7 +648,7 @@ app.get("/api/produk-mlglobal", async (req, res) => {
 // ==========================================
 
 const FF_DIAMOND_WHITELIST = [
-  "FF15",
+  "FF5",
   "FF12",
   "FF25",
   "FF50",
@@ -673,7 +673,7 @@ app.get("/api/produk-ff", async (req, res) => {
         params: {
           member_code: TV_MEMBER_CODE,
           signature: signature,
-          kode: "FF",
+          kode: "FFID",
         },
       },
     );
