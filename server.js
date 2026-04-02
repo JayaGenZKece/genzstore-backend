@@ -638,6 +638,102 @@ app.get("/api/produk-mlglobal", async (req, res) => {
 });
 
 // ==========================================
+// ROUTE 10: AMBIL PRODUK FREE FIRE DARI TOKOVOUCHER
+// Kode prefix: FFID (Free Fire Indonesia)
+// Endpoint: GET /api/produk-ff
+// ==========================================
+// ⚠️ Cek kode produk FF aktif di akun TokoVoucher lu dulu:
+// GET https://api.tokovoucher.net/produk/code?member_code=XXX&signature=XXX&kode=FFID
+// Sesuaikan FF_DIAMOND_WHITELIST di bawah dengan kode yang tersedia!
+// ==========================================
+
+const FF_DIAMOND_WHITELIST = [
+  "FFID5",
+  "FFID12",
+  "FFID25",
+  "FFID50",
+  "FFID70",
+  "FFID100",
+  "FFID140",
+  "FFID210",
+  "FFID355",
+  "FFID520",
+  "FFID720",
+  "FFID1080",
+  "FFID2180",
+  "FFID5600",
+];
+
+app.get("/api/produk-ff", async (req, res) => {
+  try {
+    const signature = TV_SIGNATURE_DEFAULT;
+    console.log("📦 Mengambil produk Free Fire dari TokoVoucher...");
+
+    const response = await axios.get(
+      "https://api.tokovoucher.net/produk/code",
+      {
+        params: {
+          member_code: TV_MEMBER_CODE,
+          signature: signature,
+          kode: "FFID",
+        },
+      },
+    );
+
+    const hasil = response.data;
+    console.log("📥 Response FF:", JSON.stringify(hasil).substring(0, 200));
+
+    if (!hasil || (hasil.status !== 1 && hasil.status !== "1")) {
+      return res.status(500).json({
+        status: "error",
+        pesan: "Gagal ambil produk Free Fire dari TokoVoucher",
+        detail: hasil,
+      });
+    }
+
+    // Filter hanya yang ada di whitelist DAN statusnya aktif
+    const produkAktif = hasil.data.filter(
+      (p) =>
+        FF_DIAMOND_WHITELIST.includes(p.code) &&
+        (p.status === 1 || p.status === "1"),
+    );
+
+    // Map dan hitung harga jual + margin
+    const produkFormatted = produkAktif
+      .map((p) => {
+        const hargaModal = parseInt(p.price || 0);
+        const hargaJual = hitungHargaJual(hargaModal);
+        return {
+          kode: p.code,
+          nama: p.nama_produk,
+          hargaModal,
+          hargaJual,
+          hargaJualFormat: formatRupiah(hargaJual),
+          tipe: "diamond",
+        };
+      })
+      .sort((a, b) => a.hargaJual - b.hargaJual);
+
+    console.log(
+      `✅ Berhasil ambil ${produkFormatted.length} produk Free Fire aktif`,
+    );
+
+    res.json({
+      status: "sukses",
+      total: produkFormatted.length,
+      margin: `${MARGIN_PERSEN}%`,
+      data: produkFormatted,
+    });
+  } catch (error) {
+    console.error("❌ Error ambil produk FF:", error.message);
+    res.status(500).json({
+      status: "error",
+      pesan: "Gagal menghubungi TokoVoucher: " + error.message,
+    });
+  }
+});
+
+// ==========================================
 // NYALAIN SERVER
 // ==========================================
 module.exports = app;
