@@ -36,6 +36,15 @@ const MARGIN = {
   ml: 8, // Mobile Legends Server ID  → 8%
   mlglobal: 8, // Mobile Legends Global     → 8%
   ff: 10, // Free Fire                 → 10%
+  pubg: 10, // PUBG Mobile               → 10%
+  valorant: 10, // Valorant                  → 10%
+  cod: 10, // Call of Duty Mobile       → 10%
+  genshin: 10, // Genshin Impact            → 10%
+  pb: 10, // Point Blank               → 10%
+  aov: 10, // Arena of Valor            → 10%
+  coc: 10, // Clash of Clans            → 10%
+  hok: 10, // Honor of Kings            → 10%
+  roblox: 10, // Roblox                    → 10%
 };
 
 // ==========================================
@@ -653,24 +662,20 @@ app.get("/api/produk-mlglobal", async (req, res) => {
 // ==========================================
 
 const FF_DIAMOND_WHITELIST = [
-  "FF10",
+  "FF5",
   "FF12",
-  "FF15",
-  "FF20",
   "FF25",
-  "FF30",
-  "FF40",
   "FF50",
-  "FF60",
   "FF70",
-  "FF80",
   "FF100",
-  "FF120",
   "FF140",
   "FF210",
   "FF355",
   "FF520",
   "FF720",
+  "FF1080",
+  "FF2180",
+  "FF5600",
 ];
 
 app.get("/api/produk-ff", async (req, res) => {
@@ -684,7 +689,7 @@ app.get("/api/produk-ff", async (req, res) => {
         params: {
           member_code: TV_MEMBER_CODE,
           signature: signature,
-          kode: "FF",
+          kode: "FFID",
         },
       },
     );
@@ -741,6 +746,264 @@ app.get("/api/produk-ff", async (req, res) => {
     });
   }
 });
+
+// ==========================================
+// HELPER: BUILDER ROUTE PRODUK DENGAN WHITELIST
+// Sama persis polanya dengan ML dan FF
+// whitelist = array kode produk yang diizinkan
+// whitelist null = tampil semua yang aktif
+// ==========================================
+function buatRouteProduk(kodePrefixTV, gameKey, labelLog, whitelist = null) {
+  return async (req, res) => {
+    try {
+      console.log(`📦 Mengambil produk ${labelLog} dari TokoVoucher...`);
+      const response = await axios.get(
+        "https://api.tokovoucher.net/produk/code",
+        {
+          params: {
+            member_code: TV_MEMBER_CODE,
+            signature: TV_SIGNATURE_DEFAULT,
+            kode: kodePrefixTV,
+          },
+        },
+      );
+      const hasil = response.data;
+      console.log(
+        `📥 Response ${labelLog}:`,
+        JSON.stringify(hasil).substring(0, 200),
+      );
+
+      if (!hasil || (hasil.status !== 1 && hasil.status !== "1")) {
+        return res.status(500).json({
+          status: "error",
+          pesan: `Gagal ambil produk ${labelLog} dari TokoVoucher`,
+          detail: hasil,
+        });
+      }
+
+      const marginGame = MARGIN[gameKey] || 10;
+
+      // Filter: pakai whitelist kalau ada, kalau tidak tampil semua yang aktif
+      const produkAktif = hasil.data.filter((p) => {
+        const aktif = p.status === 1 || p.status === "1";
+        if (whitelist) return aktif && whitelist.includes(p.code);
+        return aktif;
+      });
+
+      const produkFormatted = produkAktif
+        .map((p) => {
+          const hargaModal = parseInt(p.price || 0);
+          const hargaJual = hitungHargaJual(hargaModal, marginGame);
+          return {
+            kode: p.code,
+            nama: p.nama_produk,
+            hargaModal,
+            hargaJual,
+            hargaJualFormat: formatRupiah(hargaJual),
+            tipe: "diamond",
+          };
+        })
+        .sort((a, b) => a.hargaJual - b.hargaJual);
+
+      console.log(
+        `✅ Berhasil ambil ${produkFormatted.length} produk ${labelLog} aktif`,
+      );
+      res.json({
+        status: "sukses",
+        total: produkFormatted.length,
+        margin: `${marginGame}%`,
+        data: produkFormatted,
+      });
+    } catch (error) {
+      console.error(`❌ Error ambil produk ${labelLog}:`, error.message);
+      res.status(500).json({
+        status: "error",
+        pesan: `Gagal menghubungi TokoVoucher: ${error.message}`,
+      });
+    }
+  };
+}
+
+// ==========================================
+// ROUTE 11: ROBLOX VOUCHER
+// Prefix: ROB — Global Voucher
+// Contoh kode: ROB800, ROB2000, ROB4500, ROB10000
+// ==========================================
+app.get("/api/produk-roblox", buatRouteProduk("ROB", "roblox", "Roblox", null));
+
+// ==========================================
+// ROUTE 12: PUBG MOBILE ID
+// Prefix: PMI — Region Indonesia
+// ==========================================
+const PUBG_WHITELIST = [
+  "PMI60",
+  "PMI120",
+  "PMI180",
+  "PMI240",
+  "PMI325",
+  "PMI385",
+  "PMI445",
+  "PMI505",
+  "PMI565",
+  "PMI660",
+  "PMI720",
+  "PMI780",
+  "PMI840",
+  "PMI900",
+  "PMI985",
+  "PMI1105",
+  "PMI1165",
+  "PMI1320",
+];
+app.get(
+  "/api/produk-pubg",
+  buatRouteProduk("PMI", "pubg", "PUBG Mobile", PUBG_WHITELIST),
+);
+
+// ==========================================
+// ROUTE 13: VALORANT ID
+// Prefix: VALO — Region Indonesia
+// ==========================================
+const VALORANT_WHITELIST = [
+  "VALO475",
+  "VALO950",
+  "VALO1000",
+  "VALO1475",
+  "VALO2000",
+  "VALO2050",
+  "VALO2525",
+  "VALO3050",
+  "VALO3650",
+  "VALO4100",
+];
+app.get(
+  "/api/produk-valorant",
+  buatRouteProduk("VALO", "valorant", "Valorant", VALORANT_WHITELIST),
+);
+
+// ==========================================
+// ROUTE 14: CALL OF DUTY MOBILE ID
+// Prefix: CODM — Region Indonesia
+// ==========================================
+const COD_WHITELIST = [
+  "CODM5",
+  "CODM10",
+  "CODM20",
+  "CODM50",
+  "CODM100",
+  "CODM200",
+  "CODM300",
+  "CODM500",
+  "CODM1000",
+];
+app.get(
+  "/api/produk-cod",
+  buatRouteProduk("CODM", "cod", "Call of Duty Mobile", COD_WHITELIST),
+);
+
+// ==========================================
+// ROUTE 15: GENSHIN IMPACT
+// Prefix: GIR — Genesis Crystals
+// ==========================================
+const GENSHIN_WHITELIST = [
+  "GIR60",
+  "GIR60CN",
+  "GIR120",
+  "GIR180",
+  "GIR240",
+  "GIR330",
+  "GIR330CN",
+  "GIR1090",
+  "GIR1090CN",
+  "GIR2240",
+  "GIR2240CN",
+  "GIR3880",
+  "GIR3380CN",
+];
+app.get(
+  "/api/produk-genshin",
+  buatRouteProduk("GIR", "genshin", "Genshin Impact", GENSHIN_WHITELIST),
+);
+
+// ==========================================
+// ROUTE 16: POINT BLANK
+// Prefix: PBC — Point Blank Cash
+// ==========================================
+const PB_WHITELIST = [
+  "PBC10",
+  "PBC20",
+  "PBC50",
+  "PBC75",
+  "PBC100",
+  "PBC200",
+  "PBC250",
+  "PBC300",
+  "PBC500",
+];
+app.get(
+  "/api/produk-pb",
+  buatRouteProduk("PBC", "pb", "Point Blank", PB_WHITELIST),
+);
+
+// ==========================================
+// ROUTE 17: ARENA OF VALOR
+// Prefix: AOV — All Bind
+// ==========================================
+const AOV_WHITELIST = [
+  "AOV40",
+  "AOV90",
+  "AOV230",
+  "AOV470",
+  "AOV950",
+  "AOV1430",
+  "AOV2390",
+];
+app.get(
+  "/api/produk-aov",
+  buatRouteProduk("AOV", "aov", "Arena of Valor", AOV_WHITELIST),
+);
+
+// ==========================================
+// ROUTE 18: CLASH OF CLANS
+// Prefix: COCVGP — Google Play Voucher IDR
+// Input tujuan: Nomor HP
+// ==========================================
+const COC_WHITELIST = [
+  "COCVGP5000",
+  "COCVGP10000",
+  "COCVGP16000",
+  "COCVGP20000",
+  "COCVGP35000",
+  "COCVGP50000",
+  "COCVGP79000",
+  "COCVGP100000",
+  "COCVGP129000",
+  "COCVGP150000",
+];
+app.get(
+  "/api/produk-coc",
+  buatRouteProduk("COCVGP", "coc", "Clash of Clans", COC_WHITELIST),
+);
+
+// ==========================================
+// ROUTE 19: HONOR OF KINGS
+// Prefix: HOK — Region Indonesia (Season)
+// ==========================================
+const HOK_WHITELIST = [
+  "HOK8",
+  "HOK16",
+  "HOK80",
+  "HOK240",
+  "HOK400",
+  "HOK560",
+  "HOK830",
+  "HOK1200",
+  "HOK2400",
+];
+app.get(
+  "/api/produk-hok",
+  buatRouteProduk("HOK", "hok", "Honor of Kings", HOK_WHITELIST),
+);
 
 // ==========================================
 // NYALAIN SERVER
