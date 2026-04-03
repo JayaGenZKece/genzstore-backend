@@ -689,7 +689,7 @@ app.get("/api/produk-ff", async (req, res) => {
         params: {
           member_code: TV_MEMBER_CODE,
           signature: signature,
-          kode: "FFID",
+          kode: "FF",
         },
       },
     );
